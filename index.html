@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dales CPC Presentation Pacing Timer</title>
+<style>
+  :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
+  body{margin:0;padding:2rem;background:#0e0e12;color:#eaeaea;}
+  h1{font-size:1.25rem;margin:0 0 1rem 0;opacity:.9;}
+  .card{max-width:760px;margin:auto;background:#16161d;border:1px solid #2a2a36;border-radius:16px;padding:1rem 1.25rem 1.25rem;}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+  .field{flex:1 1 220px;}
+  label{display:block;font-size:.9rem;margin:0 0 .35rem .1rem;opacity:.85;}
+  input{width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid #2a2a36;background:#0f0f15;color:#eaeaea;font-size:1rem;}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+  .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin:.2rem 0 1rem;}
+  button{cursor:pointer;border:1px solid #2a2a36;background:#1f1f2b;color:#eaeaea;border-radius:12px;padding:.6rem .9rem;font-size:1rem}
+  button.primary{background:#2c6bed;border-color:#2c6bed;}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .display{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:.4rem}
+  .tile{background:#0f0f15;border:1px solid #2a2a36;border-radius:14px;padding:1rem;text-align:center}
+  .tile .label{font-size:.8rem;opacity:.75;margin-bottom:.35rem}
+  .tile .value{font-size:2rem;font-variant-numeric:tabular-nums}
+  .hint{font-size:.9rem;opacity:.8;margin-top:.75rem}
+  .fine{color:#7ee787}
+  .warn{color:#ffd166}
+  .bad{color:#ff6b6b}
+  @media (max-width:640px){ .display{grid-template-columns:1fr} .tile .value{font-size:1.7rem} }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Dales CPC Presentation Pacing Timer</h1>
+    <div class="row">
+      <div class="field">
+        <label for="slides">Number of content slides</label>
+        <input id="slides" type="number" min="1" step="1" placeholder="e.g. 60" />
+      </div>
+      <div class="field">
+        <label for="minutes">Target duration (minutes)</label>
+        <input id="minutes" type="number" min="1" step="1" value="210" />
+      </div>
+      <div class="field">
+        <label for="grace">Optional intro/outro buffer (minutes)</label>
+        <input id="grace" type="number" min="0" step="1" value="0" />
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="start" class="primary">Start</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="resume" disabled>Resume</button>
+      <button id="reset">Reset</button>
+      <button id="fullscreen">Fullscreen</button>
+    </div>
+
+    <div class="display">
+      <div class="tile">
+        <div class="label">Elapsed</div>
+        <div class="value" id="elapsed">00:00</div>
+      </div>
+      <div class="tile">
+        <div class="label">You should be on slide</div>
+        <div class="value" id="shouldSlide">—</div>
+      </div>
+      <div class="tile">
+        <div class="label">Tempo</div>
+        <div class="value" id="tempo">—</div>
+      </div>
+    </div>
+
+    <div class="hint" id="hint">Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.</div>
+  </div>
+
+<script>
+(() => {
+  const slidesEl = document.getElementById('slides');
+  const minutesEl = document.getElementById('minutes');
+  const graceEl = document.getElementById('grace');
+  const startBtn = document.getElementById('start');
+  const pauseBtn = document.getElementById('pause');
+  const resumeBtn = document.getElementById('resume');
+  const resetBtn = document.getElementById('reset');
+  const fsBtn = document.getElementById('fullscreen');
+  const elapsedEl = document.getElementById('elapsed');
+  const shouldSlideEl = document.getElementById('shouldSlide');
+  const tempoEl = document.getElementById('tempo');
+  const hintEl = document.getElementById('hint');
+
+  let timer = null;
+  let startTime = null;
+  let pausedAt = 0;
+  let accPaused = 0;
+
+  function fmt(seconds) {
+    seconds = Math.max(0, Math.floor(seconds));
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function update() {
+    const slides = parseInt(slidesEl.value, 10);
+    const mins = parseInt(minutesEl.value, 10);
+    const grace = parseInt(graceEl.value || '0', 10);
+    const valid = Number.isInteger(slides) && slides > 0 && Number.isInteger(mins) && mins > 0 && Number.isInteger(grace) && grace >= 0;
+
+    if (!valid || !startTime) return;
+
+    const now = Date.now();
+    const elapsedSec = ((now - startTime) / 1000) - accPaused;
+    const totalSec = (mins * 60);
+    const perSlide = (totalSec - grace * 60) / slides;
+
+    const e = Math.max(0, Math.min(elapsedSec, totalSec));
+    elapsedEl.textContent = fmt(e);
+
+    let targetSlide;
+    if (perSlide <= 0) {
+      targetSlide = 1;
+    } else {
+      targetSlide = Math.floor(Math.max(0, e - grace * 60) / perSlide) + 1;
+      targetSlide = Math.min(slides, Math.max(1, targetSlide));
+    }
+    shouldSlideEl.textContent = targetSlide;
+
+    const paceSec = perSlide > 0 ? perSlide : 0;
+    tempoEl.textContent = paceSec ? `${(paceSec/60).toFixed(2)} min/slide` : '—';
+
+    if (e >= totalSec - 0.5) {
+      hintEl.innerHTML = '<span class="bad">Time’s up.</span>';
+      stopTimer();
+    } else if (e < grace * 60) {
+      hintEl.innerHTML = '<span class="fine">Buffer time</span> before content pacing kicks in.';
+    } else {
+      hintEl.innerHTML = 'Glance here. If your actual slide is lower than shown, speed up. If it’s higher, slow down.';
+    }
+  }
+
+  function startTimer() {
+    if (timer) return;
+    const slides = parseInt(slidesEl.value, 10);
+    const mins = parseInt(minutesEl.value, 10);
+    const grace = parseInt(graceEl.value || '0', 10);
+    if (!Number.isInteger(slides) || slides <= 0 || !Number.isInteger(mins) || mins <= 0 || !Number.isInteger(grace) || grace < 0) {
+      hintEl.innerHTML = '<span class="bad">Enter valid numbers for slides, minutes, and buffer.</span>';
+      return;
+    }
+    startTime = Date.now();
+    accPaused = 0;
+    pausedAt = 0;
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    resumeBtn.disabled = true;
+    slidesEl.disabled = true;
+    minutesEl.disabled = true;
+    graceEl.disabled = true;
+    timer = setInterval(update, 200);
+    update();
+  }
+
+  function stopTimer() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    startBtn.disabled = false;
+  }
+
+  function pauseTimer() {
+    if (!timer) return;
+    pausedAt = Date.now();
+    clearInterval(timer);
+    timer = null;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = false;
+  }
+
+  function resumeTimer() {
+    if (timer || !pausedAt) return;
+    accPaused += (Date.now() - pausedAt) / 1000;
+    pausedAt = 0;
+    timer = setInterval(update, 200);
+    pauseBtn.disabled = false;
+    resumeBtn.disabled = true;
+  }
+
+  function resetAll() {
+    stopTimer();
+    startTime = null;
+    accPaused = 0;
+    pausedAt = 0;
+    elapsedEl.textContent = "00:00";
+    shouldSlideEl.textContent = "—";
+    tempoEl.textContent = "—";
+    slidesEl.disabled = false;
+    minutesEl.disabled = false;
+    graceEl.disabled = false;
+    hintEl.textContent = "Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.";
+  }
+
+  startBtn.addEventListener('click', startTimer);
+  pauseBtn.addEventListener('click', pauseTimer);
+  resumeBtn.addEventListener('click', resumeTimer);
+  resetBtn.addEventListener('click', resetAll);
+  fsBtn.addEventListener('click', () => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement) el.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (timer) pauseTimer(); else resumeTimer();
+    } else if (e.key.toLowerCase() === 'r') {
+      resetAll();
+    } else if (e.key.toLowerCase() === 'f') {
+      fsBtn.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
