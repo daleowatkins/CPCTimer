@@ -8,70 +8,112 @@
   :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
   body{margin:0;padding:2rem;background:#0e0e12;color:#eaeaea;}
   h1{font-size:1.25rem;margin:0 0 1rem 0;opacity:.9;}
-  .card{max-width:760px;margin:auto;background:#16161d;border:1px solid #2a2a36;border-radius:16px;padding:1rem 1.25rem 1.25rem;}
-  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
-  .field{flex:1 1 220px;}
-  label{display:block;font-size:.9rem;margin:0 0 .35rem .1rem;opacity:.85;}
-  input{width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid #2a2a36;background:#0f0f15;color:#eaeaea;font-size:1rem;}
+  .card{max-width:980px;margin:auto;background:#16161d;border:1px solid #2a2a36;border-radius:16px;padding:1rem 1.25rem 1.25rem;}
+  .layout{display:grid;grid-template-columns:2fr 1fr;gap:1rem}
+  .row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;}
+  .field{flex:1 1 160px;max-width:240px}
+  label{display:block;font-size:.85rem;margin:0 0 .3rem .1rem;opacity:.85;}
+  input{width:100%;padding:.5rem .6rem;border-radius:10px;border:1px solid #2a2a36;background:#0f0f15;color:#eaeaea;font-size:.98rem;}
   input[type=number]::-webkit-outer-spin-button,
   input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
   .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin:.2rem 0 1rem;}
   button{cursor:pointer;border:1px solid #2a2a36;background:#1f1f2b;color:#eaeaea;border-radius:12px;padding:.6rem .9rem;font-size:1rem}
   button.primary{background:#2c6bed;border-color:#2c6bed;}
-  button:disabled{opacity:.5;cursor:not-allowed}
+  button:disabled{opacity:.55;cursor:not-allowed}
+
   .display{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:.4rem}
   .tile{background:#0f0f15;border:1px solid #2a2a36;border-radius:14px;padding:1rem;text-align:center}
   .tile .label{font-size:.8rem;opacity:.75;margin-bottom:.35rem}
   .tile .value{font-size:2rem;font-variant-numeric:tabular-nums}
-  .hint{font-size:.9rem;opacity:.8;margin-top:.75rem}
+
+  .progress-wrap{margin-top:.9rem}
+  .progress-label{display:flex;justify-content:space-between;font-size:.85rem;opacity:.85;margin-bottom:.35rem}
+  .progress{position:relative;height:14px;background:#0f0f15;border:1px solid #2a2a36;border-radius:999px;overflow:hidden}
+  .bar{position:absolute;left:0;top:0;bottom:0;width:0%;background:#2c6bed;transition:width .2s linear}
+  .progtext{margin-top:.35rem;font-size:.9rem;opacity:.9;text-align:center}
+
+  .hint{font-size:.9rem;opacity:.85;margin-top:.75rem}
   .fine{color:#7ee787}
   .warn{color:#ffd166}
   .bad{color:#ff6b6b}
-  @media (max-width:640px){ .display{grid-template-columns:1fr} .tile .value{font-size:1.7rem} }
+
+  /* Log panel */
+  .log{background:#0f0f15;border:1px solid #2a2a36;border-radius:14px;padding:1rem;height:100%}
+  .log h2{font-size:1rem;margin:0 0 .6rem 0;opacity:.9}
+  .loglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;max-height:420px;overflow:auto}
+  .loglist li{font-size:.9rem;opacity:.95}
+  .loglist .time{opacity:.7}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .display{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
   <div class="card">
     <h1>Dales CPC Presentation Pacing Timer</h1>
-    <div class="row">
-      <div class="field">
-        <label for="slides">Number of content slides</label>
-        <input id="slides" type="number" min="1" step="1" placeholder="e.g. 60" />
+
+    <div class="layout">
+      <!-- LEFT: controls, timer, progress -->
+      <div>
+        <div class="row">
+          <div class="field">
+            <label for="slides">Number of content slides</label>
+            <input id="slides" type="number" min="1" step="1" placeholder="e.g. 60" />
+          </div>
+          <div class="field">
+            <label for="minutes">Target duration (minutes)</label>
+            <input id="minutes" type="number" min="1" step="1" value="210" />
+          </div>
+          <div class="field">
+            <label for="grace">Optional intro/outro buffer (minutes)</label>
+            <input id="grace" type="number" min="0" step="1" value="0" />
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="start" class="primary">Start Presentation</button>
+          <button id="pause" disabled>Start Break</button>
+          <button id="resume" disabled>End Break</button>
+          <button id="end" disabled>End Presentation</button>
+          <button id="reset">Reset</button>
+          <button id="fullscreen">Fullscreen</button>
+        </div>
+
+        <div class="display">
+          <div class="tile">
+            <div class="label">Elapsed</div>
+            <div class="value" id="elapsed">00:00</div>
+          </div>
+          <div class="tile">
+            <div class="label">You should be on slide</div>
+            <div class="value" id="shouldSlide">—</div>
+          </div>
+          <div class="tile">
+            <div class="label">Tempo</div>
+            <div class="value" id="tempo">—</div>
+          </div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>Slide Progress</span>
+            <span id="pct">0%</span>
+          </div>
+          <div class="progress"><div class="bar" id="bar"></div></div>
+          <div class="progtext" id="progtext">Slide — of —</div>
+        </div>
+
+        <div class="hint" id="hint">Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.</div>
       </div>
-      <div class="field">
-        <label for="minutes">Target duration (minutes)</label>
-        <input id="minutes" type="number" min="1" step="1" value="210" />
-      </div>
-      <div class="field">
-        <label for="grace">Optional intro/outro buffer (minutes)</label>
-        <input id="grace" type="number" min="0" step="1" value="0" />
+
+      <!-- RIGHT: log -->
+      <div class="log">
+        <h2>Session Log</h2>
+        <ul class="loglist" id="loglist"></ul>
       </div>
     </div>
-
-    <div class="controls">
-      <button id="start" class="primary">Start</button>
-      <button id="pause" disabled>Pause</button>
-      <button id="resume" disabled>Resume</button>
-      <button id="reset">Reset</button>
-      <button id="fullscreen">Fullscreen</button>
-    </div>
-
-    <div class="display">
-      <div class="tile">
-        <div class="label">Elapsed</div>
-        <div class="value" id="elapsed">00:00</div>
-      </div>
-      <div class="tile">
-        <div class="label">You should be on slide</div>
-        <div class="value" id="shouldSlide">—</div>
-      </div>
-      <div class="tile">
-        <div class="label">Tempo</div>
-        <div class="value" id="tempo">—</div>
-      </div>
-    </div>
-
-    <div class="hint" id="hint">Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.</div>
   </div>
 
 <script>
@@ -79,21 +121,40 @@
   const slidesEl = document.getElementById('slides');
   const minutesEl = document.getElementById('minutes');
   const graceEl = document.getElementById('grace');
+
   const startBtn = document.getElementById('start');
   const pauseBtn = document.getElementById('pause');
   const resumeBtn = document.getElementById('resume');
+  const endBtn = document.getElementById('end');
   const resetBtn = document.getElementById('reset');
   const fsBtn = document.getElementById('fullscreen');
+
   const elapsedEl = document.getElementById('elapsed');
   const shouldSlideEl = document.getElementById('shouldSlide');
   const tempoEl = document.getElementById('tempo');
   const hintEl = document.getElementById('hint');
 
+  const barEl = document.getElementById('bar');
+  const pctEl = document.getElementById('pct');
+  const progTextEl = document.getElementById('progtext');
+  const logList = document.getElementById('loglist');
+
   let timer = null;
   let startTime = null;
-  let pausedAt = 0;
-  let accPaused = 0;
+  let pausedAt = 0;   // ms timestamp when pause started
+  let accPaused = 0;  // seconds total paused
 
+  function nowStr() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function addLog(kind, msg) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="time">[${nowStr()}]</span> ${msg}`;
+    logList.appendChild(li);
+    logList.scrollTop = logList.scrollHeight;
+  }
   function fmt(seconds) {
     seconds = Math.max(0, Math.floor(seconds));
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -106,12 +167,11 @@
     const mins = parseInt(minutesEl.value, 10);
     const grace = parseInt(graceEl.value || '0', 10);
     const valid = Number.isInteger(slides) && slides > 0 && Number.isInteger(mins) && mins > 0 && Number.isInteger(grace) && grace >= 0;
-
     if (!valid || !startTime) return;
 
     const now = Date.now();
     const elapsedSec = ((now - startTime) / 1000) - accPaused;
-    const totalSec = (mins * 60);
+    const totalSec = mins * 60;
     const perSlide = (totalSec - grace * 60) / slides;
 
     const e = Math.max(0, Math.min(elapsedSec, totalSec));
@@ -128,6 +188,18 @@
 
     const paceSec = perSlide > 0 ? perSlide : 0;
     tempoEl.textContent = paceSec ? `${(paceSec/60).toFixed(2)} min/slide` : '—';
+
+    // Progress bar based on "should be on slide"
+    if (slides > 0) {
+      const progress = Math.max(0, Math.min(1, targetSlide / slides));
+      barEl.style.width = `${progress * 100}%`;
+      pctEl.textContent = `${Math.round(progress * 100)}%`;
+      progTextEl.textContent = `Slide ${targetSlide} of ${slides}`;
+    } else {
+      barEl.style.width = '0%';
+      pctEl.textContent = '0%';
+      progTextEl.textContent = 'Slide — of —';
+    }
 
     if (e >= totalSec - 0.5) {
       hintEl.innerHTML = '<span class="bad">Time’s up.</span>';
@@ -151,13 +223,17 @@
     startTime = Date.now();
     accPaused = 0;
     pausedAt = 0;
+
     startBtn.disabled = true;
     pauseBtn.disabled = false;
     resumeBtn.disabled = true;
+    endBtn.disabled = false;
     slidesEl.disabled = true;
     minutesEl.disabled = true;
     graceEl.disabled = true;
+
     timer = setInterval(update, 200);
+    addLog('start', 'Presentation started.');
     update();
   }
 
@@ -169,15 +245,17 @@
     pauseBtn.disabled = true;
     resumeBtn.disabled = true;
     startBtn.disabled = false;
+    // keep End enabled so you can log end even if timer expired
   }
 
   function pauseTimer() {
-    if (!timer) return;
+    if (!timer) return; // already paused or not started
     pausedAt = Date.now();
     clearInterval(timer);
     timer = null;
     pauseBtn.disabled = true;
     resumeBtn.disabled = false;
+    addLog('break-start', 'Break started.');
   }
 
   function resumeTimer() {
@@ -187,6 +265,13 @@
     timer = setInterval(update, 200);
     pauseBtn.disabled = false;
     resumeBtn.disabled = true;
+    addLog('break-end', 'Break ended.');
+  }
+
+  function endPresentation() {
+    addLog('end', 'Presentation ended.');
+    stopTimer();
+    endBtn.disabled = true;
   }
 
   function resetAll() {
@@ -194,18 +279,34 @@
     startTime = null;
     accPaused = 0;
     pausedAt = 0;
+
     elapsedEl.textContent = "00:00";
     shouldSlideEl.textContent = "—";
     tempoEl.textContent = "—";
+    barEl.style.width = '0%';
+    pctEl.textContent = '0%';
+    progTextEl.textContent = 'Slide — of —';
+
     slidesEl.disabled = false;
     minutesEl.disabled = false;
     graceEl.disabled = false;
+
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    endBtn.disabled = true;
+
     hintEl.textContent = "Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.";
+
+    // clear log
+    logList.innerHTML = '';
   }
 
+  // Buttons
   startBtn.addEventListener('click', startTimer);
   pauseBtn.addEventListener('click', pauseTimer);
   resumeBtn.addEventListener('click', resumeTimer);
+  endBtn.addEventListener('click', endPresentation);
   resetBtn.addEventListener('click', resetAll);
   fsBtn.addEventListener('click', () => {
     const el = document.documentElement;
@@ -213,14 +314,19 @@
     else document.exitFullscreen?.();
   });
 
+  // Keyboard shortcuts: Space toggles pause/resume, R reset, F fullscreen, E end
   window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
     if (e.code === 'Space') {
       e.preventDefault();
+      if (!startTime) return;
       if (timer) pauseTimer(); else resumeTimer();
-    } else if (e.key.toLowerCase() === 'r') {
+    } else if (k === 'r') {
       resetAll();
-    } else if (e.key.toLowerCase() === 'f') {
+    } else if (k === 'f') {
       fsBtn.click();
+    } else if (k === 'e') {
+      endPresentation();
     }
   });
 })();
