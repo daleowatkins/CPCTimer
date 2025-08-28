@@ -3,16 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Dales CPC Presentation Pacing Timer v1.002</title>
+<title>Dales CPC Presentation Pacing Timer v1.003</title>
 <style>
   :root{
-    --bg:#0e0e12;
-    --panel:#16161d;
-    --border:#2a2a36;
-    --text:#eaeaea;
-    --muted:#9aa0a6;
-    --accent:#8b5cf6; /* purple */
-    --accent-600:#7c3aed;
+    --bg:#0e0e12; --panel:#16161d; --border:#2a2a36; --text:#eaeaea;
+    --accent:#8b5cf6;
   }
   *{box-sizing:border-box}
   body{margin:0;padding:2rem;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
@@ -23,8 +18,8 @@
 
   /* Inputs */
   .row{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;}
-  .field{flex:1 1 170px;max-width:220px}
-  label{display:block;font-size:.83rem;margin:0 0 .25rem .1rem;opacity:.85;}
+  .field{flex:1 1 160px;max-width:210px}
+  label{display:block;font-size:.82rem;margin:0 0 .25rem .1rem;opacity:.85;white-space:nowrap}
   input{width:100%;padding:.45rem .55rem;border-radius:10px;border:1px solid var(--border);background:#0f0f15;color:var(--text);font-size:.95rem;}
 
   /* Buttons */
@@ -48,14 +43,12 @@
 
   .hint{font-size:.9rem;opacity:.85;margin-top:.75rem}
   .fine{color:#7ee787}
-  .warn{color:#ffd166}
   .bad{color:#ff6b6b}
 
   /* Log panel */
   .log{background:#0f0f15;border:1px solid var(--border);border-radius:14px;padding:1rem;align-self:start}
   .log h2{font-size:1rem;margin:0 0 .6rem 0;opacity:.95}
-  .loglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;
-           max-height:calc(100vh - 300px); overflow:auto}
+  .loglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;max-height:calc(100vh - 300px);overflow:auto}
   .loglist li{font-size:.9rem;opacity:.95}
   .loglist .time{opacity:.7}
 
@@ -67,7 +60,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>Dales CPC Presentation Pacing Timer <span class="ver">v1.002</span></h1>
+    <h1>Dales CPC Presentation Pacing Timer <span class="ver">v1.003</span></h1>
 
     <div class="layout">
       <!-- LEFT -->
@@ -82,7 +75,7 @@
             <input id="minutes" type="number" min="1" step="1" value="210" />
           </div>
           <div class="field">
-            <label for="grace">Optional intro/outro buffer (minutes)</label>
+            <label for="grace">Intro/outro buffer (min)</label>
             <input id="grace" type="number" min="0" step="1" value="0" />
           </div>
         </div>
@@ -176,6 +169,15 @@
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   }
+  function paceToWords(secPerSlide){
+    if (!secPerSlide || !isFinite(secPerSlide) || secPerSlide <= 0) return '—';
+    const total = Math.round(secPerSlide);
+    if (total < 60) return `${total} second${total===1?'':'s'} per slide`;
+    const m = Math.floor(total/60);
+    const s = total % 60;
+    if (s === 0) return `${m} minute${m===1?'':'s'} per slide`;
+    return `${m} minute${m===1?'':'s'} and ${s} second${s===1?'':'s'} per slide`;
+  }
 
   function update() {
     const slides = parseInt(slidesEl.value, 10);
@@ -201,10 +203,9 @@
     }
     shouldSlideEl.textContent = targetSlide;
 
-    const paceSec = perSlide > 0 ? perSlide : 0;
-    tempoEl.textContent = paceSec ? `${(paceSec/60).toFixed(2)} min/slide` : '—';
+    tempoEl.textContent = paceToWords(perSlide);
 
-    // Progress bar based on "should be on slide"
+    // Progress bar
     if (slides > 0) {
       const progress = Math.max(0, Math.min(1, targetSlide / slides));
       barEl.style.width = `${progress * 100}%`;
@@ -236,16 +237,13 @@
       return;
     }
     startTime = Date.now();
-    accPaused = 0;
-    pausedAt = 0;
+    accPaused = 0; pausedAt = 0;
 
     startBtn.disabled = true;
     pauseBtn.disabled = false;
     resumeBtn.disabled = true;
     endBtn.disabled = false;
-    slidesEl.disabled = true;
-    minutesEl.disabled = true;
-    graceEl.disabled = true;
+    slidesEl.disabled = true; minutesEl.disabled = true; graceEl.disabled = true;
 
     timer = setInterval(update, 200);
     addLog('Presentation started.');
@@ -253,18 +251,14 @@
   }
 
   function stopTimer() {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
+    if (timer) { clearInterval(timer); timer = null; }
     pauseBtn.disabled = true;
     resumeBtn.disabled = true;
     startBtn.disabled = false;
-    // keep End enabled so you can log end even if timer expired
   }
 
   function pauseTimer() {
-    if (!timer) return; // already paused or not started
+    if (!timer) return;
     pausedAt = Date.now();
     clearInterval(timer);
     timer = null;
@@ -291,28 +285,18 @@
 
   function resetAll() {
     stopTimer();
-    startTime = null;
-    accPaused = 0;
-    pausedAt = 0;
+    startTime = null; accPaused = 0; pausedAt = 0;
 
     elapsedEl.textContent = "00:00";
     shouldSlideEl.textContent = "—";
     tempoEl.textContent = "—";
-    barEl.style.width = '0%';
-    pctEl.textContent = '0%';
-    progTextEl.textContent = 'Slide — of —';
+    barEl.style.width = '0%'; pctEl.textContent = '0%'; progTextEl.textContent = 'Slide — of —';
 
-    slidesEl.disabled = false;
-    minutesEl.disabled = false;
-    graceEl.disabled = false;
+    slidesEl.disabled = false; minutesEl.disabled = false; graceEl.disabled = false;
 
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    resumeBtn.disabled = true;
-    endBtn.disabled = true;
+    startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true; endBtn.disabled = true;
 
     hintEl.textContent = "Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.";
-
     logList.innerHTML = '';
   }
 
@@ -328,20 +312,13 @@
     else document.exitFullscreen?.();
   });
 
-  // Keyboard shortcuts: Space toggle pause/resume, R reset, F fullscreen, E end
+  // Shortcuts
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
-    if (e.code === 'Space') {
-      e.preventDefault();
-      if (!startTime) return;
-      if (timer) pauseTimer(); else resumeTimer();
-    } else if (k === 'r') {
-      resetAll();
-    } else if (k === 'f') {
-      fsBtn.click();
-    } else if (k === 'e') {
-      endPresentation();
-    }
+    if (e.code === 'Space') { e.preventDefault(); if (!startTime) return; if (timer) pauseTimer(); else resumeTimer(); }
+    else if (k === 'r') resetAll();
+    else if (k === 'f') fsBtn.click();
+    else if (k === 'e') endPresentation();
   });
 })();
 </script>
