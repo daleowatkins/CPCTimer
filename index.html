@@ -3,33 +3,47 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Dales CPC Presentation Pacing Timer</title>
+<title>Dales CPC Presentation Pacing Timer v1.002</title>
 <style>
-  :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
-  body{margin:0;padding:2rem;background:#0e0e12;color:#eaeaea;}
-  h1{font-size:1.25rem;margin:0 0 1rem 0;opacity:.9;}
-  .card{max-width:980px;margin:auto;background:#16161d;border:1px solid #2a2a36;border-radius:16px;padding:1rem 1.25rem 1.25rem;}
-  .layout{display:grid;grid-template-columns:2fr 1fr;gap:1rem}
-  .row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;}
-  .field{flex:1 1 160px;max-width:240px}
-  label{display:block;font-size:.85rem;margin:0 0 .3rem .1rem;opacity:.85;}
-  input{width:100%;padding:.5rem .6rem;border-radius:10px;border:1px solid #2a2a36;background:#0f0f15;color:#eaeaea;font-size:.98rem;}
-  input[type=number]::-webkit-outer-spin-button,
-  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+  :root{
+    --bg:#0e0e12;
+    --panel:#16161d;
+    --border:#2a2a36;
+    --text:#eaeaea;
+    --muted:#9aa0a6;
+    --accent:#8b5cf6; /* purple */
+    --accent-600:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:2rem;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
+  h1{font-size:1.25rem;margin:0 0 1rem 0;opacity:.95}
+  .ver{opacity:.7;font-weight:600}
+  .card{max-width:980px;margin:auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:1rem 1.25rem 1.25rem;}
+  .layout{display:grid;grid-template-columns:2fr 1fr;gap:1rem;align-items:start}
+
+  /* Inputs */
+  .row{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;}
+  .field{flex:1 1 170px;max-width:220px}
+  label{display:block;font-size:.83rem;margin:0 0 .25rem .1rem;opacity:.85;}
+  input{width:100%;padding:.45rem .55rem;border-radius:10px;border:1px solid var(--border);background:#0f0f15;color:var(--text);font-size:.95rem;}
+
+  /* Buttons */
   .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin:.2rem 0 1rem;}
-  button{cursor:pointer;border:1px solid #2a2a36;background:#1f1f2b;color:#eaeaea;border-radius:12px;padding:.6rem .9rem;font-size:1rem}
-  button.primary{background:#2c6bed;border-color:#2c6bed;}
+  button{cursor:pointer;border:1px solid var(--border);background:#1f1f2b;color:var(--text);border-radius:12px;padding:.55rem .85rem;font-size:1rem}
+  button.primary{background:var(--accent);border-color:var(--accent);}
   button:disabled{opacity:.55;cursor:not-allowed}
 
+  /* Display tiles */
   .display{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:.4rem}
-  .tile{background:#0f0f15;border:1px solid #2a2a36;border-radius:14px;padding:1rem;text-align:center}
+  .tile{background:#0f0f15;border:1px solid var(--border);border-radius:14px;padding:1rem;text-align:center}
   .tile .label{font-size:.8rem;opacity:.75;margin-bottom:.35rem}
   .tile .value{font-size:2rem;font-variant-numeric:tabular-nums}
 
+  /* Progress */
   .progress-wrap{margin-top:.9rem}
   .progress-label{display:flex;justify-content:space-between;font-size:.85rem;opacity:.85;margin-bottom:.35rem}
-  .progress{position:relative;height:14px;background:#0f0f15;border:1px solid #2a2a36;border-radius:999px;overflow:hidden}
-  .bar{position:absolute;left:0;top:0;bottom:0;width:0%;background:#2c6bed;transition:width .2s linear}
+  .progress{position:relative;height:14px;background:#0f0f15;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+  .bar{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--accent);transition:width .2s linear}
   .progtext{margin-top:.35rem;font-size:.9rem;opacity:.9;text-align:center}
 
   .hint{font-size:.9rem;opacity:.85;margin-top:.75rem}
@@ -38,9 +52,10 @@
   .bad{color:#ff6b6b}
 
   /* Log panel */
-  .log{background:#0f0f15;border:1px solid #2a2a36;border-radius:14px;padding:1rem;height:100%}
-  .log h2{font-size:1rem;margin:0 0 .6rem 0;opacity:.9}
-  .loglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;max-height:420px;overflow:auto}
+  .log{background:#0f0f15;border:1px solid var(--border);border-radius:14px;padding:1rem;align-self:start}
+  .log h2{font-size:1rem;margin:0 0 .6rem 0;opacity:.95}
+  .loglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;
+           max-height:calc(100vh - 300px); overflow:auto}
   .loglist li{font-size:.9rem;opacity:.95}
   .loglist .time{opacity:.7}
 
@@ -52,10 +67,10 @@
 </head>
 <body>
   <div class="card">
-    <h1>Dales CPC Presentation Pacing Timer</h1>
+    <h1>Dales CPC Presentation Pacing Timer <span class="ver">v1.002</span></h1>
 
     <div class="layout">
-      <!-- LEFT: controls, timer, progress -->
+      <!-- LEFT -->
       <div>
         <div class="row">
           <div class="field">
@@ -108,7 +123,7 @@
         <div class="hint" id="hint">Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.</div>
       </div>
 
-      <!-- RIGHT: log -->
+      <!-- RIGHT -->
       <div class="log">
         <h2>Session Log</h2>
         <ul class="loglist" id="loglist"></ul>
@@ -149,7 +164,7 @@
     const pad = n => String(n).padStart(2,'0');
     return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
-  function addLog(kind, msg) {
+  function addLog(msg) {
     const li = document.createElement('li');
     li.innerHTML = `<span class="time">[${nowStr()}]</span> ${msg}`;
     logList.appendChild(li);
@@ -233,7 +248,7 @@
     graceEl.disabled = true;
 
     timer = setInterval(update, 200);
-    addLog('start', 'Presentation started.');
+    addLog('Presentation started.');
     update();
   }
 
@@ -255,7 +270,7 @@
     timer = null;
     pauseBtn.disabled = true;
     resumeBtn.disabled = false;
-    addLog('break-start', 'Break started.');
+    addLog('Break started.');
   }
 
   function resumeTimer() {
@@ -265,11 +280,11 @@
     timer = setInterval(update, 200);
     pauseBtn.disabled = false;
     resumeBtn.disabled = true;
-    addLog('break-end', 'Break ended.');
+    addLog('Break ended.');
   }
 
   function endPresentation() {
-    addLog('end', 'Presentation ended.');
+    addLog('Presentation ended.');
     stopTimer();
     endBtn.disabled = true;
   }
@@ -298,7 +313,6 @@
 
     hintEl.textContent = "Enter slides and minutes, then hit Start. Pause and Resume buttons are available to manage breaks.";
 
-    // clear log
     logList.innerHTML = '';
   }
 
@@ -314,7 +328,7 @@
     else document.exitFullscreen?.();
   });
 
-  // Keyboard shortcuts: Space toggles pause/resume, R reset, F fullscreen, E end
+  // Keyboard shortcuts: Space toggle pause/resume, R reset, F fullscreen, E end
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (e.code === 'Space') {
